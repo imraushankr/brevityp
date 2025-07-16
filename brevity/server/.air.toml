@@ -1,0 +1,28 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/brevity.exe ./src/cmd/server/main.go"  # Changed path
+  bin = "tmp/brevity.exe"  # Changed binary name
+  include_ext = ["go", "yaml", "yml"]
+  exclude_dir = ["vendor", "tmp", "docs"]
+  delay = 1000
+  stop_on_error = true
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
+
+[log]
+  time = true
+  main_only = false
+
+[misc]
+  clean_on_exit = true
+
+[env]
+  GIN_MODE = "debug"
+  DB_PATH = "data/brevity.db"
