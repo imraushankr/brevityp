@@ -137,6 +137,9 @@ func envVariables(v *viper.Viper) {
 		"cloudinary.api_secret",
 		"cloudinary.folder",
 
+		"storage.max_avatar_size",
+		"storage.upload_dir",
+
 		"logger.level",
 		"logger.format",
 		"logger.file_path",

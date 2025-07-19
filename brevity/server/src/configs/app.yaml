@@ -41,6 +41,11 @@ email:
     from_name: "${SMTP_FROM_NAME}"
     use_tls: "${SMTP_USE_TLS}"
 
+storage:
+  max_avatar_size: "${STORAGE_MAX_AVATAR_SIZE}" # in bytes
+  upload_dir: "${STORAGE_UPLOAD_DIR}"
+  
+
 cloudinary:
   cloud_name: "${CLOUDINARY_CLOUD_NAME}"
   api_key: "${CLOUDINARY_API_KEY}"

@@ -12,6 +12,7 @@ type Config struct {
 	Logger     LoggerConfig     `mapstructure:"logger"`
 	CORS       CORSConfig       `mapstructure:"cors"`
 	RateLimit  RateLimitConfig  `mapstructure:"rate_limit"`
+	Storage    StorageConfig    `mapstructure:"storage"`
 }
 
 type AppConfig struct {
@@ -73,6 +74,11 @@ type CloudinaryConfig struct {
 	APIKey    string `mapstructure:"api_key"`
 	APISecret string `mapstructure:"api_secret"`
 	Folder    string `mapstructure:"folder"`
+}
+
+type StorageConfig struct {
+	MaxAvatarSize int64  `mapstructure:"max_avatar_size"`
+	UploadDir     string `mapstructure:"upload_dir"`
 }
 
 type LoggerConfig struct {
