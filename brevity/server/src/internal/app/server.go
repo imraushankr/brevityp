@@ -85,7 +85,7 @@ func (s *Server) displayServerInfo() {
 
 	fmt.Printf("%-20s: %s\n", "  Base URL", baseURL)
 	fmt.Printf("%-20s: %s\n", "  Local URL", localURL)
-	fmt.Printf("%-20s: %s/health\n", "  Health Check", localURL)
+	fmt.Printf("%-20s: %s/api/v1/system/health\n", "  Health Check", localURL)
 
 	fmt.Printf("%-20s: %v\n", "  Debug Mode", s.cfg.App.Debug)
 	fmt.Printf("%-20s: %v\n", "  Read Timeout", s.cfg.Server.ReadTimeout)
@@ -94,7 +94,7 @@ func (s *Server) displayServerInfo() {
 	fmt.Printf("%s\n", line)
 	fmt.Printf("  📡 Server is ready to accept connections\n")
 	fmt.Printf("  🔗 Visit: %s\n", localURL)
-	fmt.Printf("  ❤️  Health: %s/health\n", localURL)
+	fmt.Printf("  ❤️  Health: %s/api/v1/system/health\n", localURL)
 	fmt.Printf("  🛑 Press Ctrl+C to stop\n")
 	fmt.Printf("%s\n\n", line)
 }

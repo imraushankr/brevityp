@@ -115,17 +115,6 @@ type ValidationErrorResponse struct {
 	Errors map[string]string `json:"errors"`
 }
 
-// User methods
-// func (u *User) BeforeCreate(tx *gorm.DB) error {
-// 	id, err := sid.Generate()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	u.ID = id
-// 	u.Role = RoleUser // Default role
-// 	return nil
-// }
-
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	id, err := sid.Generate()
 	if err != nil {
@@ -133,7 +122,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	}
 	u.ID = id
 	if u.Role == "" {
-		u.Role = RoleUser // Default role
+		u.Role = RoleUser 
 	}
 	return nil
 }

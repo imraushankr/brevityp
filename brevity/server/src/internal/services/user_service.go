@@ -160,6 +160,7 @@ func (s *userService) Login(ctx context.Context, userId, password string) (*mode
         return nil, "", models.ErrUserNotVerified
     }
 
+		fmt.Println("User Password: ", foundUser.Password, password)
     if err := auth.IsPasswordCorrect(foundUser.Password, password); err != nil {
         s.log.Warn("Invalid password", logger.String("userID", foundUser.ID))
         return nil, "", models.ErrInvalidCredentials
