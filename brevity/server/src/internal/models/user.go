@@ -26,7 +26,7 @@ type User struct {
 	FirstName  string `json:"first_name" validate:"required,min=2,max=50"`
 	LastName   string `json:"last_name" validate:"required,min=2,max=50"`
 	Username   string `json:"username" validate:"required,min=3,max=30,alphanum" gorm:"unique"`
-	Role       Role   `json:"role" validate:"required,oneof=admin user" gorm:"type:varchar(20)"`
+	Role       Role   `json:"role" gorm:"type:varchar(20)"`
 	Email      string `json:"email" validate:"required,email" gorm:"unique"`
 	Phone      string `json:"phone,omitempty" validate:"omitempty,min=10,max=15"`
 	Avatar     string `json:"avatar,omitempty"`
@@ -34,11 +34,11 @@ type User struct {
 	IsActive   bool   `json:"is_active" gorm:"default:true"`
 	IsVerified bool   `json:"is_verified" gorm:"default:false"`
 
-	VerificationToken   string     `json:"-" gorm:"type:varchar(255)"`
-	VerificationExpires *time.Time `json:"-" gorm:"type:timestamp"`
+	VerificationToken     string     `json:"-" gorm:"type:varchar(255)"`
+	VerificationExpiresAt *time.Time `json:"-" gorm:"type:timestamp"`
 
-	ResetPasswordToken   string     `json:"-" gorm:"type:varchar(255)"`
-	ResetPasswordExpires *time.Time `json:"-" gorm:"type:timestamp"`
+	ResetPasswordToken     string     `json:"-" gorm:"type:varchar(255)"`
+	ResetPasswordExpiresAt *time.Time `json:"-" gorm:"type:timestamp"`
 
 	RefreshToken string `json:"-" gorm:"-:all"`
 
@@ -58,7 +58,7 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
+	UserID   string `json:"userId" validate:"required"`
 	Password string `json:"password" validate:"required,min=8"`
 }
 
@@ -116,13 +116,25 @@ type ValidationErrorResponse struct {
 }
 
 // User methods
+// func (u *User) BeforeCreate(tx *gorm.DB) error {
+// 	id, err := sid.Generate()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	u.ID = id
+// 	u.Role = RoleUser // Default role
+// 	return nil
+// }
+
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	id, err := sid.Generate()
 	if err != nil {
 		return err
 	}
 	u.ID = id
-	u.Role = RoleUser // Default role
+	if u.Role == "" {
+		u.Role = RoleUser // Default role
+	}
 	return nil
 }
 
@@ -139,20 +151,20 @@ func (u *User) Sanitize() {
 
 func (u *User) GenerateVerificationToken(token string, expires time.Time) {
 	u.VerificationToken = token
-	u.VerificationExpires = &expires
+	u.VerificationExpiresAt = &expires
 }
 
 func (u *User) ClearVerificationToken() {
 	u.VerificationToken = ""
-	u.VerificationExpires = nil
+	u.VerificationExpiresAt = nil
 }
 
 func (u *User) GenerateResetToken(token string, expires time.Time) {
 	u.ResetPasswordToken = token
-	u.ResetPasswordExpires = &expires
+	u.ResetPasswordExpiresAt = &expires
 }
 
 func (u *User) ClearResetToken() {
 	u.ResetPasswordToken = ""
-	u.ResetPasswordExpires = nil
+	u.ResetPasswordExpiresAt = nil
 }

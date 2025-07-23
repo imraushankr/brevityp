@@ -96,39 +96,83 @@ func (s *userService) Register(ctx context.Context, user *models.User) error {
 	return nil
 }
 
+// func (s *userService) Login(ctx context.Context, userId, password string) (*models.User, string, error) {
+// 	s.log.Info("Logging attempt", logger.String("userId", userId))
+
+// 	if userId == "" || password == "" {
+// 		return nil, "", models.ErrInvalidInput
+// 	}
+
+// 	user := &models.User{Email: userId, Username: userId}
+// 	foundUser, err := s.userRepo.FindUser(ctx, user)
+// 	if err != nil {
+// 		if errors.Is(err, models.ErrUserNotFound) {
+// 			return nil, "", models.ErrInvalidCredentials
+// 		}
+// 		return nil, "", fmt.Errorf("failed to find user: %w", err)
+// 	}
+
+// 	if !foundUser.IsVerified {
+// 		return nil, "", models.ErrUserNotVerified
+// 	}
+
+// 	if err := auth.IsPasswordCorrect(foundUser.Password, password); err != nil {
+// 		return nil, "", models.ErrInvalidCredentials
+// 	}
+
+// 	token, err := s.auth.GenerateTokens(foundUser.ID, string(foundUser.Role))
+// 	if err != nil {
+// 		s.log.Error("Failed to generate token", logger.NamedError("error", err),
+// 			logger.String("userID", foundUser.ID))
+// 		return nil, "", fmt.Errorf("failed to generate token: %w", err)
+// 	}
+
+// 	s.log.Info("User logged in successfully", logger.String("userID", foundUser.ID))
+// 	return foundUser, token.AccessToken, nil
+// }
+
 func (s *userService) Login(ctx context.Context, userId, password string) (*models.User, string, error) {
-	s.log.Info("Logging attempt", logger.String("userId", userId))
+    s.log.Info("Logging attempt", 
+        logger.String("userId", userId),
+        logger.String("source", "login_request"))
 
-	if userId == "" || password == "" {
-		return nil, "", models.ErrInvalidInput
-	}
+    if userId == "" || password == "" {
+        return nil, "", models.ErrInvalidInput
+    }
 
-	user := &models.User{Email: userId, Username: userId}
-	foundUser, err := s.userRepo.FindUser(ctx, user)
-	if err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
-			return nil, "", models.ErrInvalidCredentials
-		}
-		return nil, "", fmt.Errorf("failed to find user: %w", err)
-	}
+    user := &models.User{Email: userId, Username: userId}
+    foundUser, err := s.userRepo.FindUser(ctx, user)
+    if err != nil {
+        if errors.Is(err, models.ErrUserNotFound) {
+            s.log.Warn("User not found", logger.String("email_or_username", userId))
+            return nil, "", models.ErrInvalidCredentials
+        }
+        s.log.Error("Database error finding user", logger.NamedError("error", err))
+        return nil, "", fmt.Errorf("failed to find user: %w", err)
+    }
 
-	if !foundUser.IsVerified {
-		return nil, "", models.ErrUserNotVerified
-	}
+    s.log.Info("User found", 
+        logger.String("userID", foundUser.ID),
+        logger.Bool("isVerified", foundUser.IsVerified))
 
-	if err := auth.IsPasswordCorrect(foundUser.Password, password); err != nil {
-		return nil, "", models.ErrInvalidCredentials
-	}
+    if !foundUser.IsVerified {
+        s.log.Warn("User not verified", logger.String("userID", foundUser.ID))
+        return nil, "", models.ErrUserNotVerified
+    }
 
-	token, err := s.auth.GenerateTokens(foundUser.ID, string(foundUser.Role))
-	if err != nil {
-		s.log.Error("Failed to generate token", logger.NamedError("error", err),
-			logger.String("userID", foundUser.ID))
-		return nil, "", fmt.Errorf("failed to generate token: %w", err)
-	}
+    if err := auth.IsPasswordCorrect(foundUser.Password, password); err != nil {
+        s.log.Warn("Invalid password", logger.String("userID", foundUser.ID))
+        return nil, "", models.ErrInvalidCredentials
+    }
 
-	s.log.Info("User logged in successfully", logger.String("userID", foundUser.ID))
-	return foundUser, token.AccessToken, nil
+    token, err := s.auth.GenerateTokens(foundUser.ID, string(foundUser.Role))
+    if err != nil {
+        s.log.Error("Token generation failed", logger.NamedError("error", err))
+        return nil, "", fmt.Errorf("failed to generate token: %w", err)
+    }
+
+    s.log.Info("Login successful", logger.String("userID", foundUser.ID))
+    return foundUser, token.AccessToken, nil
 }
 
 func (s *userService) FindUser(ctx context.Context, identifier string) (*models.User, error) {

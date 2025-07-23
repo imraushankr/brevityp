@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  GO_MODULE: "github.com/imraushankr/brevity"
+  GO_MODULE: "github.com/imraushankr/bervity/server"
   MIGRATIONS_DIR: "src/migrations"
   DB_FILE: "data/brevity.db"
   SERVER_CMD: "go run src/cmd/server/main.go"

@@ -1,22 +1,3 @@
-// package v1
-
-// import (
-// 	"github.com/imraushankr/bervity/server/src/internal/pkg/logger"
-// 	"github.com/imraushankr/bervity/server/src/internal/services"
-// )
-
-// type UserHandler struct {
-// 	userService services.UserService
-// 	log         logger.Logger
-// }
-
-// func NewUserHandler(userService services.UserService, log logger.Logger) *UserHandler {
-// 	return &UserHandler{
-// 		userService: userService,
-// 		log:         log,
-// 	}
-// }
-
 package v1
 
 import (
@@ -41,15 +22,47 @@ func NewUserHandler(userService services.UserService, log logger.Logger) *UserHa
 	}
 }
 
+// func (h *UserHandler) Register(c *gin.Context) {
+// 	var req models.RegisterRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		h.log.Error("Failed to bind user data", logger.NamedError("error", err))
+// 		utils.ValidationError(c, utils.GetValidationErrors(err))
+// 		return
+// 	}
+
+// 	if err := h.userService.Register(c.Request.Context(), &user); err != nil {
+// 		switch err {
+// 		case models.ErrEmailAlreadyExists, models.ErrUsernameAlreadyExists:
+// 			utils.Error(c, http.StatusConflict, "Registration failed", err)
+// 		default:
+// 			utils.Error(c, http.StatusInternalServerError, "Registration failed", err)
+// 		}
+// 		return
+// 	}
+
+// 	// Clear sensitive data before sending response
+// 	user.Password = ""
+// 	utils.Success(c, http.StatusCreated, "User registered successfully. Please check your email for verification.", user)
+// }
+
 func (h *UserHandler) Register(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var req models.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Error("Failed to bind user data", logger.NamedError("error", err))
 		utils.ValidationError(c, utils.GetValidationErrors(err))
 		return
 	}
 
-	if err := h.userService.Register(c.Request.Context(), &user); err != nil {
+	// Map RegisterRequest to User model
+	user := &models.User{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Username:  req.Username,
+		Email:     req.Email,
+		Password:  req.Password,
+	}
+
+	if err := h.userService.Register(c.Request.Context(), user); err != nil {
 		switch err {
 		case models.ErrEmailAlreadyExists, models.ErrUsernameAlreadyExists:
 			utils.Error(c, http.StatusConflict, "Registration failed", err)
@@ -60,16 +73,46 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}
 
 	// Clear sensitive data before sending response
-	user.Password = ""
+	user.Sanitize()
 	utils.Success(c, http.StatusCreated, "User registered successfully. Please check your email for verification.", user)
 }
 
-func (h *UserHandler) Login(c *gin.Context) {
-	var loginRequest struct {
-		UserID   string `json:"userId" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
+// func (h *UserHandler) Login(c *gin.Context) {
+// 	var loginRequest struct {
+// 		UserID   string `json:"userId" binding:"required"`
+// 		Password string `json:"password" binding:"required"`
+// 	}
 
+// 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
+// 		h.log.Error("Failed to bind login data", logger.NamedError("error", err))
+// 		utils.ValidationError(c, utils.GetValidationErrors(err))
+// 		return
+// 	}
+
+// 	user, token, err := h.userService.Login(c.Request.Context(), loginRequest.UserID, loginRequest.Password)
+// 	if err != nil {
+// 		switch err {
+// 		case models.ErrInvalidCredentials:
+// 			utils.Error(c, http.StatusUnauthorized, "Login failed", err)
+// 		case models.ErrUserNotVerified:
+// 			utils.Error(c, http.StatusForbidden, "Login failed", err)
+// 		default:
+// 			utils.Error(c, http.StatusInternalServerError, "Login failed", err)
+// 		}
+// 		return
+// 	}
+
+// 	// Clear sensitive data before sending response
+// 	user.Password = ""
+// 	response := gin.H{
+// 		"user":  user,
+// 		"token": token,
+// 	}
+// 	utils.Success(c, http.StatusOK, "Login successful", response)
+// }
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var loginRequest models.LoginRequest // Use the proper struct
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		h.log.Error("Failed to bind login data", logger.NamedError("error", err))
 		utils.ValidationError(c, utils.GetValidationErrors(err))
@@ -90,7 +133,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	// Clear sensitive data before sending response
-	user.Password = ""
+	user.Sanitize()
 	response := gin.H{
 		"user":  user,
 		"token": token,
