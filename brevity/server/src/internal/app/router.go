@@ -1,3 +1,64 @@
+// package app
+
+// import (
+// 	"github.com/gin-gonic/gin"
+// 	"github.com/imraushankr/bervity/server/src/configs"
+// 	"github.com/imraushankr/bervity/server/src/internal/handlers/v1"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/auth"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/database"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/email"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/logger"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/storage"
+// 	"github.com/imraushankr/bervity/server/src/internal/repository"
+// 	"github.com/imraushankr/bervity/server/src/internal/routes"
+// 	"github.com/imraushankr/bervity/server/src/internal/services"
+// )
+
+// func SetupRouter(cfg *configs.Config, db *database.DB, log logger.Logger) (*gin.Engine, error) {
+// 	router := gin.Default()
+
+// 	// Initialize auth service
+// 	authService := auth.NewAuth(&cfg.JWT)
+
+// 	// Initialize email service
+// 	emailService := email.NewEmailService(&cfg.Email, log)
+
+// 	// Initialize storage provider
+// 	storageProvider, err := storage.NewStorage(cfg)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Initialize repositories
+// 	userRepo := repository.NewUserRepository(db.DB, log)
+
+// 	// Initialize services
+// 	userService := services.NewUserService(
+// 		userRepo,
+// 		authService,
+// 		emailService,
+// 		cfg,
+// 		storageProvider,
+// 		log,
+// 	)
+
+// 	// Initialize handlers
+// 	userHandler := v1.NewUserHandler(userService, log)
+// 	healthHandler := v1.NewHealthHandler(cfg)
+// 	authHandler := v1.NewAuthHandler(userService, log)
+
+// 	// Setup routes with auth dependencies
+// 	routes.SetupRoutes(router, userHandler, healthHandler, authHandler, authService, cfg)
+
+// 	// 404 handler
+// 	router.NoRoute(func(c *gin.Context) {
+// 		c.JSON(404, gin.H{"message": "Not found"})
+// 	})
+
+// 	return router, nil
+// }
+
+
 package app
 
 import (
@@ -17,13 +78,9 @@ import (
 func SetupRouter(cfg *configs.Config, db *database.DB, log logger.Logger) (*gin.Engine, error) {
 	router := gin.Default()
 
-	// Initialize auth service
+	// Initialize core services
 	authService := auth.NewAuth(&cfg.JWT)
-
-	// Initialize email service
 	emailService := email.NewEmailService(&cfg.Email, log)
-
-	// Initialize storage provider
 	storageProvider, err := storage.NewStorage(cfg)
 	if err != nil {
 		return nil, err
@@ -31,9 +88,18 @@ func SetupRouter(cfg *configs.Config, db *database.DB, log logger.Logger) (*gin.
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB, log)
+	authRepo := repository.NewAuthRepository(db.DB, log)
 
 	// Initialize services
-	userService := services.NewUserService(
+	authSvc := services.NewAuthService(
+		authRepo,
+		authService,
+		emailService,
+		cfg,
+		log,
+	)
+
+	userSvc := services.NewUserService(
 		userRepo,
 		authService,
 		emailService,
@@ -43,12 +109,12 @@ func SetupRouter(cfg *configs.Config, db *database.DB, log logger.Logger) (*gin.
 	)
 
 	// Initialize handlers
-	userHandler := v1.NewUserHandler(userService, log)
+	authHandler := v1.NewAuthHandler(authSvc, cfg, log)
+	userHandler := v1.NewUserHandler(userSvc, log)
 	healthHandler := v1.NewHealthHandler(cfg)
-	authHandler := v1.NewAuthHandler(userService, log)
 
-	// Setup routes with auth dependencies
-	routes.SetupRoutes(router, userHandler, healthHandler, authHandler, authService, cfg)
+	// Setup routes
+	routes.SetupRoutes(router, userHandler,  healthHandler, authHandler, authService, cfg)
 
 	// 404 handler
 	router.NoRoute(func(c *gin.Context) {

@@ -1,97 +1,101 @@
 package v1
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/imraushankr/bervity/server/src/internal/models"
+	"github.com/imraushankr/bervity/server/src/internal/pkg/interfaces"
 	"github.com/imraushankr/bervity/server/src/internal/pkg/logger"
-	"github.com/imraushankr/bervity/server/src/internal/services"
 	"github.com/imraushankr/bervity/server/src/internal/utils"
 )
 
 type UserHandler struct {
-	userService services.UserService
-	log         logger.Logger
+	service interfaces.UserService
+	log     logger.Logger
 }
 
-func NewUserHandler(userService services.UserService, log logger.Logger) *UserHandler {
+func NewUserHandler(service interfaces.UserService, log logger.Logger) *UserHandler {
 	return &UserHandler{
-		userService: userService,
-		log:         log,
+		service: service,
+		log:     log,
 	}
 }
 
-func (h *UserHandler) GetUser(c *gin.Context) {
-	identifier := c.Param("identifier")
-
-	user, err := h.userService.FindUser(c.Request.Context(), identifier)
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	userID := c.GetString("user_id")
+	user, err := h.service.FindUser(c.Request.Context(), userID)
 	if err != nil {
-		if err == models.ErrUserNotFound {
+		if errors.Is(err, models.ErrUserNotFound) {
 			utils.Error(c, http.StatusNotFound, "User not found", err)
 		} else {
-			utils.Error(c, http.StatusInternalServerError, "Failed to get user", err)
+			utils.Error(c, http.StatusInternalServerError, "Failed to get profile", err)
 		}
 		return
 	}
 
-	// Clear sensitive data before sending response
-	user.Password = ""
-	utils.Success(c, http.StatusOK, "User retrieved successfully", user)
+	user.Sanitize()
+	utils.Success(c, http.StatusOK, "Profile retrieved successfully", user)
 }
 
-func (h *UserHandler) UpdateUser(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		h.log.Error("Failed to bind user data", logger.NamedError("error", err))
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var req models.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ValidationError(c, utils.GetValidationErrors(err))
 		return
 	}
 
-	user.ID = c.Param("id")
-	if err := h.userService.UpdateUser(c.Request.Context(), &user); err != nil {
-		utils.Error(c, http.StatusInternalServerError, "Failed to update user", err)
+	user, err := h.service.FindUser(c.Request.Context(), userID)
+	if err != nil {
+		utils.Error(c, http.StatusNotFound, "User not found", err)
 		return
 	}
 
-	// Clear sensitive data before sending response
-	user.Password = ""
-	utils.Success(c, http.StatusOK, "User updated successfully", user)
-}
+	user.FirstName = req.FirstName
+	user.LastName = req.LastName
 
-func (h *UserHandler) DeleteUser(c *gin.Context) {
-	userID := c.Param("id")
-
-	if err := h.userService.DeleteUser(c.Request.Context(), userID); err != nil {
-		utils.Error(c, http.StatusInternalServerError, "Failed to delete user", err)
+	if err := h.service.UpdateUser(c.Request.Context(), user); err != nil {
+		utils.Error(c, http.StatusInternalServerError, "Failed to update profile", err)
 		return
 	}
 
-	utils.Success(c, http.StatusOK, "User deleted successfully", nil)
+	user.Sanitize()
+	utils.Success(c, http.StatusOK, "Profile updated successfully", user)
 }
 
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
-	userID := c.Param("id")
+	userID := c.GetString("user_id")
 	file, header, err := c.Request.FormFile("avatar")
 	if err != nil {
-		utils.Error(c, http.StatusBadRequest, "Failed to get avatar file", err)
+		utils.Error(c, http.StatusBadRequest, "Invalid file upload", err)
 		return
 	}
 	defer file.Close()
 
-	avatarURL, err := h.userService.UploadAvatar(c.Request.Context(), userID, file, header)
+	avatarURL, err := h.service.UploadAvatar(c.Request.Context(), userID, file, header)
 	if err != nil {
 		switch err {
 		case models.ErrFileTooLarge, models.ErrInvalidFileType:
-			utils.Error(c, http.StatusBadRequest, "Avatar upload failed", err)
+			utils.Error(c, http.StatusBadRequest, "Invalid file", err)
 		default:
-			utils.Error(c, http.StatusInternalServerError, "Avatar upload failed", err)
+			utils.Error(c, http.StatusInternalServerError, "Failed to upload avatar", err)
 		}
 		return
 	}
 
-	response := gin.H{
-		"avatarUrl": avatarURL,
+	utils.Success(c, http.StatusOK, "Avatar uploaded successfully", models.UploadAvatarResponse{
+		AvatarURL: avatarURL,
+	})
+}
+
+func (h *UserHandler) DeleteAccount(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if err := h.service.DeleteUser(c.Request.Context(), userID); err != nil {
+		utils.Error(c, http.StatusInternalServerError, "Failed to delete account", err)
+		return
 	}
-	utils.Success(c, http.StatusOK, "Avatar uploaded successfully", response)
+
+	utils.Success(c, http.StatusOK, "Account deleted successfully", nil)
 }

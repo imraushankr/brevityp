@@ -84,7 +84,7 @@ type PasswordResetRequest struct {
 }
 
 type CompletePasswordResetRequest struct {
-	Token       string `json:"token" validate:"required"`
+	Token       string `json:"-"`
 	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
 
@@ -96,6 +96,11 @@ type RefreshTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required,min=8"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`	
 }
 
 type UploadAvatarResponse struct {
