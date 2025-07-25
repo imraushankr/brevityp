@@ -16,12 +16,13 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Name        string `mapstructure:"name"`
-	Version     string `mapstructure:"version"`
-	Environment string `mapstructure:"environment"`
-	Debug       bool   `mapstructure:"debug"`
-	UploadDir   string `mapstructure:"upload_dir"`
-	BaseURL     string `mapstructure:"base_url"`
+	Name         string `mapstructure:"name"`
+	Version      string `mapstructure:"version"`
+	Environment  string `mapstructure:"environment"`
+	Debug        bool   `mapstructure:"debug"`
+	UploadDir    string `mapstructure:"upload_dir"`
+	BaseURL      string `mapstructure:"base_url"`
+	FreeURLLimit int    `mapstructure:"free_url_limit"`
 }
 
 type ServerConfig struct {
