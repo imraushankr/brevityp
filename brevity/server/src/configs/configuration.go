@@ -22,7 +22,8 @@ type AppConfig struct {
 	Debug        bool   `mapstructure:"debug"`
 	UploadDir    string `mapstructure:"upload_dir"`
 	BaseURL      string `mapstructure:"base_url"`
-	FreeURLLimit int    `mapstructure:"free_url_limit"`
+	AnonURLLimit int    `mapstructure:"anon_url_limit"`
+	AuthURLLimit int    `mapstructure:"auth_url_limit"`
 }
 
 type ServerConfig struct {

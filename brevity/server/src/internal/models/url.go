@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/teris-io/shortid"
+	"gorm.io/gorm"
 )
 
 var (
@@ -14,19 +15,21 @@ type URL struct {
 	ID          string     `json:"id" gorm:"primaryKey;type:varchar(20)"`
 	OriginalURL string     `json:"original_url" validate:"required,url" gorm:"not null"`
 	ShortCode   string     `json:"short_code" validate:"required,alphanum,min=3,max=10" gorm:"unique;not null"`
-	UserID      string     `json:"user_id" gorm:"type:varchar(20);index"`
-	User        User       `json:"-" gorm:"foreignKey:UserID"`
+	UserID      *string    `json:"user_id" gorm:"type:varchar(20);index;default:null"` // Changed to pointer
+	User        *User      `json:"-" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
 	Title       string     `json:"title" validate:"max=100"`
 	Description string     `json:"description" validate:"max=255"`
 	Clicks      int        `json:"clicks" gorm:"default:0"`
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 	IsActive    bool       `json:"is_active" gorm:"default:true"`
+	CreatedByIP string     `json:"-" gorm:"type:varchar(45)"`
 	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt   *time.Time `json:"-" gorm:"index"`
 }
 
-func (u *URL) BeforeCreate() error {
+// Fixed GORM hook signature
+func (u *URL) BeforeCreate(tx *gorm.DB) error {
 	id, err := urlSid.Generate()
 	if err != nil {
 		return err
@@ -34,6 +37,32 @@ func (u *URL) BeforeCreate() error {
 	u.ID = id
 	return nil
 }
+
+// type URL struct {
+// 	ID          string     `json:"id" gorm:"primaryKey;type:varchar(20)"`
+// 	OriginalURL string     `json:"original_url" validate:"required,url" gorm:"not null"`
+// 	ShortCode   string     `json:"short_code" validate:"required,alphanum,min=3,max=10" gorm:"unique;not null"`
+// 	UserID      string     `json:"user_id" gorm:"type:varchar(20);index"`
+// 	User        User       `json:"-" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
+// 	Title       string     `json:"title" validate:"max=100"`
+// 	Description string     `json:"description" validate:"max=255"`
+// 	Clicks      int        `json:"clicks" gorm:"default:0"`
+// 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+// 	IsActive    bool       `json:"is_active" gorm:"default:true"`
+// 	CreatedByIP string `json:"-" gorm:"type:varchar(45)"`
+// 	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+// 	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+// 	DeletedAt   *time.Time `json:"-" gorm:"index"`
+// }
+
+// func (u *URL) BeforeCreate() error {
+// 	id, err := urlSid.Generate()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	u.ID = id
+// 	return nil
+// }
 
 type URLClick struct {
 	ID        string    `json:"id" gorm:"primaryKey;type:varchar(20)"`

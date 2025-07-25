@@ -23,7 +23,49 @@ func NewURLRepository(db *gorm.DB, logger logger.Logger) interfaces.URLRepositor
 	}
 }
 
+// func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
+// 	err := r.db.WithContext(ctx).Create(url).Error
+// 	if err != nil {
+// 		r.logger.Error("failed to create URL",
+// 			logger.ErrorField(err),
+// 			logger.Any("url", url))
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
+// 	// Create the URL without enforcing the User relationship if UserID is empty
+// 	if url.UserID == "" {
+// 		// Use Omit("User") to skip the user association
+// 		err := r.db.WithContext(ctx).Omit("User").Create(url).Error
+// 		if err != nil {
+// 			r.logger.Error("failed to create anonymous URL",
+// 				logger.ErrorField(err),
+// 				logger.Any("url", url))
+// 			return err
+// 		}
+// 		return nil
+// 	}
+
+// 	// For authenticated users, create with the user association
+// 	err := r.db.WithContext(ctx).Create(url).Error
+// 	if err != nil {
+// 		r.logger.Error("failed to create URL with user association",
+// 			logger.ErrorField(err),
+// 			logger.Any("url", url))
+// 		return err
+// 	}
+// 	return nil
+// }
+
+
 func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
+	// Explicitly set UserID to nil if empty
+	if url.UserID != nil && *url.UserID == "" {
+		url.UserID = nil
+	}
+
 	err := r.db.WithContext(ctx).Create(url).Error
 	if err != nil {
 		r.logger.Error("failed to create URL",
@@ -32,6 +74,17 @@ func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
 		return err
 	}
 	return nil
+}
+
+func (r *urlRepository) CountByIP(ctx context.Context, ip string) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.URL{}).
+		Where("created_by_ip = ? AND user_id IS NULL", ip).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (r *urlRepository) GetByID(ctx context.Context, id string) (*models.URL, error) {
@@ -52,7 +105,7 @@ func (r *urlRepository) GetByID(ctx context.Context, id string) (*models.URL, er
 func (r *urlRepository) GetByShortCode(ctx context.Context, code string) (*models.URL, error) {
 	var url models.URL
 	err := r.db.WithContext(ctx).
-		Where("short_code = ? AND is_active = true AND (expires_at IS NULL OR expires_at > ?)", 
+		Where("short_code = ? AND is_active = true AND (expires_at IS NULL OR expires_at > ?)",
 			code, time.Now()).
 		First(&url).Error
 	if err != nil {

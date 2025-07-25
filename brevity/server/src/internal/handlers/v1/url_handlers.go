@@ -1,3 +1,58 @@
+// package v1
+
+// import (
+// 	"net/http"
+// 	"strconv"
+// 	"time"
+
+// 	"github.com/gin-gonic/gin"
+// 	"github.com/imraushankr/bervity/server/src/internal/models"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/interfaces"
+// 	"github.com/imraushankr/bervity/server/src/internal/pkg/logger"
+// 	"github.com/imraushankr/bervity/server/src/internal/utils"
+// )
+
+// type URLHandler struct {
+// 	urlService interfaces.URLService
+// 	log        logger.Logger
+// }
+
+// func NewURLHandler(urlService interfaces.URLService, log logger.Logger) *URLHandler {
+// 	return &URLHandler{
+// 		urlService: urlService,
+// 		log:        log,
+// 	}
+// }
+
+// func (h *URLHandler) CreateURL(c *gin.Context) {
+// 	ctx := c.Request.Context()
+// 	var req models.CreateURLRequest
+
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		h.log.Debug("invalid request body", logger.ErrorField(err))
+// 		utils.Error(c, http.StatusBadRequest, "Invalid request body", models.ErrInvalidInput)
+// 		return
+// 	}
+
+// 	userID := c.GetString("user_id")
+
+// 	resp, err := h.urlService.CreateURL(ctx, &req, userID)
+// 	if err != nil {
+// 		switch err {
+// 		case models.ErrInvalidInput, models.ErrShortCodeTaken:
+// 			utils.Error(c, http.StatusBadRequest, err.Error(), err)
+// 		case models.ErrInsufficientCredits:
+// 			utils.Error(c, http.StatusPaymentRequired, err.Error(), err)
+// 		default:
+// 			h.log.Error("failed to create URL", logger.ErrorField(err))
+// 			utils.Error(c, http.StatusInternalServerError, "Failed to create URL", err)
+// 		}
+// 		return
+// 	}
+
+// 	utils.Success(c, http.StatusCreated, "URL created successfully", resp)
+// }
+
 package v1
 
 import (
@@ -34,9 +89,11 @@ func (h *URLHandler) CreateURL(c *gin.Context) {
 		return
 	}
 
+	// Get user ID if authenticated
 	userID := c.GetString("user_id")
+	ip := c.ClientIP()
 
-	resp, err := h.urlService.CreateURL(ctx, &req, userID)
+	resp, err := h.urlService.CreateURL(ctx, &req, userID, ip)
 	if err != nil {
 		switch err {
 		case models.ErrInvalidInput, models.ErrShortCodeTaken:
@@ -52,6 +109,7 @@ func (h *URLHandler) CreateURL(c *gin.Context) {
 
 	utils.Success(c, http.StatusCreated, "URL created successfully", resp)
 }
+
 
 func (h *URLHandler) GetURL(c *gin.Context) {
 	ctx := c.Request.Context()

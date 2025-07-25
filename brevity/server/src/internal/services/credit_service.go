@@ -9,42 +9,25 @@
 
 // type creditService struct {
 // 	creditRepo interfaces.CreditRepository
-// 	log    logger.Logger
+// 	log        logger.Logger
 // }
 
 // func NewCreditService(creditRepo interfaces.CreditRepository, log logger.Logger) interfaces.CreditService {
 // 	return &creditService{
 // 		creditRepo: creditRepo,
-// 		log:     log,
+// 		log:        log,
 // 	}
 // }
 
 // func (s *creditService) GetCreditBalance(ctx context.Context, userID string) (*models.CreditBalanceResponse, error) {
-// 	return s.creditRepo.GetUserCreditBalance(ctx, userID)
-// }
-
-// func (s *creditService) ApplyPromoCode(ctx context.Context, userID, code string) (*models.Credit, error) {
-// 	// Implement promo code validation and application logic
-// 	// This is a simplified version
-// 	credit := &models.Credit{
-// 		UserID: userID,
-// 		Amount: 10, // Example: fixed amount for any promo code
-// 		Reason: "promo_code:" + code,
-// 	}
-
-// 	if err := s.creditRepo.AddCredits(ctx, credit); err != nil {
-// 		s.log.Error("failed to apply promo code",
+// 	balance, err := s.creditRepo.GetUserCreditBalance(ctx, userID)
+// 	if err != nil {
+// 		s.log.Error("failed to get credit balance",
 // 			logger.ErrorField(err),
-// 			logger.String("userID", userID),
-// 			logger.String("code", code))
+// 			logger.String("userID", userID))
 // 		return nil, err
 // 	}
-
-// 	return credit, nil
-// }
-
-// func (s *creditService) GetCreditUsage(ctx context.Context, userID string) ([]*models.CreditUsage, error) {
-// 	return s.creditRepo.GetCreditUsage(ctx, userID)
+// 	return balance, nil
 // }
 
 
@@ -60,12 +43,14 @@ import (
 type creditService struct {
 	creditRepo interfaces.CreditRepository
 	log        logger.Logger
+	authLimit  int // 15 for authenticated users
 }
 
-func NewCreditService(creditRepo interfaces.CreditRepository, log logger.Logger) interfaces.CreditService {
+func NewCreditService(creditRepo interfaces.CreditRepository, log logger.Logger, authLimit int) interfaces.CreditService {
 	return &creditService{
 		creditRepo: creditRepo,
 		log:        log,
+		authLimit:  authLimit,
 	}
 }
 
@@ -77,6 +62,10 @@ func (s *creditService) GetCreditBalance(ctx context.Context, userID string) (*m
 			logger.String("userID", userID))
 		return nil, err
 	}
+
+	// Set the free limit
+	balance.FreeLimit = s.authLimit
+
 	return balance, nil
 }
 

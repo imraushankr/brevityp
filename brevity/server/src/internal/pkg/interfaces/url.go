@@ -9,6 +9,7 @@ import (
 
 type URLRepository interface {
 	Create(ctx context.Context, url *models.URL) error
+	CountByIP(ctx context.Context, ip string) (int, error)
 	GetByID(ctx context.Context, id string) (*models.URL, error)
 	GetByShortCode(ctx context.Context, code string) (*models.URL, error)
 	GetByUser(ctx context.Context, userID string, limit, offset int) ([]*models.URL, error)
@@ -25,6 +26,8 @@ type CreditRepository interface {
 	AddCredits(ctx context.Context, credit *models.Credit) error
 	UseCredits(ctx context.Context, usage *models.CreditUsage) error
 	GetCreditUsage(ctx context.Context, userID string) ([]*models.CreditUsage, error)
+	RecordFreeURLCreation(ctx context.Context, userID, urlID string) error
+	GetFreeURLCount(ctx context.Context, userID string) (int, error)
 }
 
 type SubscriptionRepository interface {
@@ -44,7 +47,7 @@ type AnalyticsRepository interface {
 }
 
 type URLService interface {
-	CreateURL(ctx context.Context, req *models.CreateURLRequest, userID string) (*models.URLResponse, error)
+	CreateURL(ctx context.Context, req *models.CreateURLRequest, userID string, ip string) (*models.URLResponse, error)
 	GetURL(ctx context.Context, shortCode string) (*models.URL, error)
 	GetUserURLs(ctx context.Context, userID string, limit, offset int) ([]*models.URLResponse, error)
 	UpdateURL(ctx context.Context, url *models.URL) (*models.URLResponse, error)

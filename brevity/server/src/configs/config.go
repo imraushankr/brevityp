@@ -103,7 +103,9 @@ func envVariables(v *viper.Viper) {
 		"app.debug",
 		"app.upload_dir",
 		"app.base_url",
-		"app.free_url_limit",
+		"app.anon_url_limit",
+		"app.auth_url_limit",
+
 		"server.host",
 		"server.port",
 		"server.read_timeout",

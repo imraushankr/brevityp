@@ -1,15 +1,39 @@
 -- Brevity Migration: create_url_table
 -- Generated: 2025-07-25T17:34:27Z
 -- Direction: UP
-
 -- Add your SQL below this line
-
+-- CREATE TABLE
+--   urls (
+--     id VARCHAR(20) PRIMARY KEY,
+--     original_url TEXT NOT NULL,
+--     short_code VARCHAR(10) NOT NULL UNIQUE,
+--     user_id VARCHAR(20),
+--     created_by_ip VARCHAR(45),
+--     title VARCHAR(100),
+--     description VARCHAR(255),
+--     clicks INTEGER DEFAULT 0,
+--     expires_at TIMESTAMP
+--     WITH
+--       TIME ZONE,
+--       is_active BOOLEAN DEFAULT true,
+--       created_at TIMESTAMP
+--     WITH
+--       TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--       updated_at TIMESTAMP
+--     WITH
+--       TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--       deleted_at TIMESTAMP
+--     WITH
+--       TIME ZONE,
+--       FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+--   );
 CREATE TABLE
   urls (
     id VARCHAR(20) PRIMARY KEY,
     original_url TEXT NOT NULL,
     short_code VARCHAR(10) NOT NULL UNIQUE,
-    user_id VARCHAR(20),
+    user_id VARCHAR(20) NULL, -- Explicitly marked as NULLable
+    created_by_ip VARCHAR(45),
     title VARCHAR(100),
     description VARCHAR(255),
     clicks INTEGER DEFAULT 0,
@@ -26,7 +50,7 @@ CREATE TABLE
       deleted_at TIMESTAMP
     WITH
       TIME ZONE,
-      FOREIGN KEY (user_id) REFERENCES users (id)
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
   );
 
 CREATE INDEX idx_urls_user_id ON urls (user_id);

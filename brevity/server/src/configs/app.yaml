@@ -5,7 +5,8 @@ app:
   debug: "${APP_DEBUG}"
   upload_dir: "./uploads"
   base_url: "http://localhost:8080"
-  free_url_limit: "${FREE_URL_LIMIT}"
+  anon_url_limit: "${ANON_URL_LIMIT}"
+  auth_url_limit: "${AUTH_URL_LIMIT}"
 
 server:
   host: "${SERVER_HOST}"

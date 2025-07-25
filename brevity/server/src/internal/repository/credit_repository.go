@@ -9,13 +9,13 @@
 // )
 
 // type creditRepository struct {
-// 	db     *gorm.DB
+// 	db  *gorm.DB
 // 	log logger.Logger
 // }
 
 // func NewCreditRepository(db *gorm.DB, log logger.Logger) interfaces.CreditRepository {
 // 	return &creditRepository{
-// 		db:     db,
+// 		db:  db,
 // 		log: log,
 // 	}
 // }
@@ -33,23 +33,41 @@
 // }
 
 // func (r *creditRepository) GetUserCreditBalance(ctx context.Context, userID string) (*models.CreditBalanceResponse, error) {
-// 	// Implementation depends on your business logic
-// 	// This is a simplified version
-// 	var balance int64
+// 	var totalCredits int64
+// 	var remainingCredits int64
+
+// 	// Get total credits
 // 	err := r.db.WithContext(ctx).Model(&models.Credit{}).
 // 		Select("COALESCE(SUM(amount), 0)").
 // 		Where("user_id = ?", userID).
-// 		Scan(&balance).Error
+// 		Scan(&totalCredits).Error
 // 	if err != nil {
-// 		r.log.Error("failed to get credit balance",
+// 		r.log.Error("failed to get total credits",
 // 			logger.ErrorField(err),
 // 			logger.String("userID", userID))
 // 		return nil, err
 // 	}
 
+// 	// Get remaining credits
+// 	err = r.db.WithContext(ctx).Model(&models.Credit{}).
+// 		Select("COALESCE(SUM(remaining), 0)").
+// 		Where("user_id = ?", userID).
+// 		Scan(&remainingCredits).Error
+// 	if err != nil {
+// 		r.log.Error("failed to get remaining credits",
+// 			logger.ErrorField(err),
+// 			logger.String("userID", userID))
+// 		return nil, err
+// 	}
+
+// 	// Calculate used credits
+// 	usedCredits := totalCredits - remainingCredits
+
 // 	return &models.CreditBalanceResponse{
-// 		Balance:    balance,
-// 		CanCreate:  balance > 0,
+// 		TotalCredits: int(totalCredits),
+// 		UsedCredits:  int(usedCredits),
+// 		Remaining:    int(remainingCredits),
+// 		CanCreate:    remainingCredits > 0,
 // 	}, nil
 // }
 
@@ -65,14 +83,40 @@
 // }
 
 // func (r *creditRepository) UseCredits(ctx context.Context, usage *models.CreditUsage) error {
-// 	err := r.db.WithContext(ctx).Create(usage).Error
-// 	if err != nil {
-// 		r.log.Error("failed to record credit usage",
-// 			logger.ErrorField(err),
-// 			logger.Any("usage", usage))
+// 	tx := r.db.WithContext(ctx).Begin()
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			tx.Rollback()
+// 		}
+// 	}()
+
+// 	// First, check if credit exists and has enough remaining
+// 	var credit models.Credit
+// 	if err := tx.Where("id = ? AND user_id = ?", usage.CreditID, usage.UserID).First(&credit).Error; err != nil {
+// 		tx.Rollback()
 // 		return err
 // 	}
-// 	return nil
+
+// 	if credit.Remaining < usage.Amount {
+// 		tx.Rollback()
+// 		return models.ErrInsufficientCredits
+// 	}
+
+// 	// Update credit remaining
+// 	if err := tx.Model(&models.Credit{}).
+// 		Where("id = ?", usage.CreditID).
+// 		Update("remaining", gorm.Expr("remaining - ?", usage.Amount)).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// Record the usage
+// 	if err := tx.Create(usage).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	return tx.Commit().Error
 // }
 
 // func (r *creditRepository) GetCreditUsage(ctx context.Context, userID string) ([]*models.CreditUsage, error) {
@@ -125,6 +169,7 @@ func (r *creditRepository) GetUserCredits(ctx context.Context, userID string) ([
 func (r *creditRepository) GetUserCreditBalance(ctx context.Context, userID string) (*models.CreditBalanceResponse, error) {
 	var totalCredits int64
 	var remainingCredits int64
+	var usedFree int64
 
 	// Get total credits
 	err := r.db.WithContext(ctx).Model(&models.Credit{}).
@@ -150,6 +195,18 @@ func (r *creditRepository) GetUserCreditBalance(ctx context.Context, userID stri
 		return nil, err
 	}
 
+	// Get used free credits
+	err = r.db.WithContext(ctx).Model(&models.CreditUsage{}).
+		Select("COALESCE(COUNT(*), 0)").
+		Where("user_id = ? AND operation = 'url_creation_free'", userID).
+		Scan(&usedFree).Error
+	if err != nil {
+		r.log.Error("failed to get used free credits",
+			logger.ErrorField(err),
+			logger.String("userID", userID))
+		return nil, err
+	}
+
 	// Calculate used credits
 	usedCredits := totalCredits - remainingCredits
 
@@ -157,6 +214,7 @@ func (r *creditRepository) GetUserCreditBalance(ctx context.Context, userID stri
 		TotalCredits: int(totalCredits),
 		UsedCredits:  int(usedCredits),
 		Remaining:    int(remainingCredits),
+		UsedFree:     int(usedFree),
 		CanCreate:    remainingCredits > 0,
 	}, nil
 }
@@ -219,4 +277,25 @@ func (r *creditRepository) GetCreditUsage(ctx context.Context, userID string) ([
 		return nil, err
 	}
 	return usages, nil
+}
+
+func (r *creditRepository) RecordFreeURLCreation(ctx context.Context, userID, urlID string) error {
+	usage := &models.CreditUsage{
+		UserID:    userID,
+		URLID:     urlID,
+		Amount:    1,
+		Operation: "url_creation_free",
+	}
+	return r.db.WithContext(ctx).Create(usage).Error
+}
+
+func (r *creditRepository) GetFreeURLCount(ctx context.Context, userID string) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.CreditUsage{}).
+		Where("user_id = ? AND operation = 'url_creation_free'", userID).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
