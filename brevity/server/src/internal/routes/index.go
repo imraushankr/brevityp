@@ -9,7 +9,15 @@ import (
 	routerv1 "github.com/imraushankr/bervity/server/src/internal/routes/v1"
 )
 
-func SetupRoutes(router *gin.Engine, userHandler *v1.UserHandler, healthHandler *v1.HealthHandler, authHandler *v1.AuthHandler, authService *auth.Auth, cfg *configs.Config, log logger.Logger) {
+func SetupRoutes(
+	router *gin.Engine, 
+	userHandler *v1.UserHandler, 
+	healthHandler *v1.HealthHandler, 
+	authHandler *v1.AuthHandler, 
+	authService *auth.Auth, 
+	cfg *configs.Config, 
+	log logger.Logger,
+) {
 	api := router.Group("/api")
 	{
 		routerv1.RegisterAuthRoutes(api.Group("/v1"), authHandler, authService, cfg, log)

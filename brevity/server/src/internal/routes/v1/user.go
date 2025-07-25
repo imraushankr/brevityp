@@ -16,11 +16,11 @@ func RegisterUserRoutes(r *gin.RouterGroup, h *v1.UserHandler, auth *auth.Auth, 
 		// Profile management
 		users.GET("/me", h.GetProfile)
 		users.PUT("/me", h.UpdateProfile)
-		
+
 		// Avatar
 		users.POST("/avatar", h.UploadAvatar)
-		
+
 		// Account management
-		users.DELETE("/account", h.DeleteAccount)
+		users.DELETE("/me", h.DeleteAccount)
 	}
 }

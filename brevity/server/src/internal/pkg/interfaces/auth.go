@@ -10,6 +10,7 @@ import (
 type AuthRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	FindUserByIdentifier(ctx context.Context, identifier string) (*models.User, error)
+	FindUserByID(ctx context.Context, id string) (*models.User, error)
 	SaveVerificationToken(ctx context.Context, email, token string, expires time.Time) error
 	VerifyUser(ctx context.Context, token string) error
 	SaveResetToken(ctx context.Context, email, token string, expires time.Time) error

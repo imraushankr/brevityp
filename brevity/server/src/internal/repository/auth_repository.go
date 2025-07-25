@@ -50,6 +50,20 @@ func (r *authRepository) FindUserByIdentifier(ctx context.Context, identifier st
 	return &user, nil
 }
 
+func (r *authRepository) FindUserByID(ctx context.Context, id string) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, models.ErrUserNotFound
+	}
+	if err != nil {
+		r.log.Error("Failed to find user by ID", logger.NamedError("error", err))
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *authRepository) SaveVerificationToken(ctx context.Context, email, token string, expires time.Time) error {
 	err := r.db.WithContext(ctx).Model(&models.User{}).
 		Where("email = ?", email).

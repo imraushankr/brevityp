@@ -8,6 +8,8 @@ import (
 )
 
 type UserRepository interface {
+	FindUserByIdentifier(ctx context.Context, identifier string) (*models.User, error)
+	FindUserByID(ctx context.Context, id string) (*models.User, error)
 	Update(ctx context.Context, user *models.User) error
 	Delete(ctx context.Context, id string) error
 	UpdateAvatar(ctx context.Context, userID, avatarURL string) error

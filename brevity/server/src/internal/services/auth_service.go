@@ -181,8 +181,11 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*m
 }
 
 func (s *authService) ChangePassword(ctx context.Context, userID string, req *models.ChangePasswordRequest) error {
-	user, err := s.repo.FindUserByIdentifier(ctx, userID)
+	user, err := s.repo.FindUserByID(ctx, userID)
 	if err != nil {
+		if errors.Is(err, models.ErrUserNotFound) {
+			return models.ErrInvalidCredentials
+		}
 		return fmt.Errorf("failed to find user: %w", err)
 	}
 

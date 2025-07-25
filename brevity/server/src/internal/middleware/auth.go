@@ -31,7 +31,7 @@ func JWTAuth(authService *auth.Auth, cfg *configs.Config, log logger.Logger) gin
 			status := http.StatusUnauthorized
 			if errors.Is(err, models.ErrExpiredToken) {
 				status = http.StatusForbidden
-				if claims != nil { // Only log user_id if claims exist
+				if claims != nil {
 					log.Warn("Expired token attempt", logger.String("user_id", claims.UserId))
 				}
 			} else {
@@ -40,6 +40,15 @@ func JWTAuth(authService *auth.Auth, cfg *configs.Config, log logger.Logger) gin
 
 			c.AbortWithStatusJSON(status, models.ErrorResponse{
 				Error: "Invalid token",
+			})
+			return
+		}
+
+		// Ensure claims are valid
+		if claims == nil || claims.UserId == "" {
+			log.Warn("Token validation returned empty claims")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error: "Invalid token claims",
 			})
 			return
 		}
@@ -81,11 +90,16 @@ func RoleAuth(allowedRoles ...models.Role) gin.HandlerFunc {
 		// Convert to Role type
 		role, ok := userRole.(models.Role)
 		if !ok {
-			log.Error("Invalid role type in context")
-			c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: "Internal server error",
-			})
-			return
+			// Try string conversion if direct type assertion fails
+			if roleStr, isString := userRole.(string); isString {
+				role = models.Role(roleStr)
+			} else {
+				log.Error("Invalid role type in context")
+				c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+					Error: "Internal server error",
+				})
+				return
+			}
 		}
 
 		// Check if user has any of the allowed roles
@@ -126,13 +140,24 @@ func RefreshTokenAuth(authService *auth.Auth, cfg *configs.Config, log logger.Lo
 			status := http.StatusUnauthorized
 			if errors.Is(err, models.ErrExpiredToken) {
 				status = http.StatusForbidden
-				log.Warn("Expired refresh token attempt", logger.String("user_id", claims.UserId))
+				if claims != nil {
+					log.Warn("Expired refresh token attempt", logger.String("user_id", claims.UserId))
+				}
 			} else {
 				log.Warn("Invalid refresh token attempt", logger.NamedError("error", err))
 			}
 
 			c.AbortWithStatusJSON(status, models.ErrorResponse{
 				Error: "Invalid refresh token",
+			})
+			return
+		}
+
+		// Ensure claims are valid
+		if claims == nil || claims.UserId == "" {
+			log.Warn("Refresh token validation returned empty claims")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error: "Invalid refresh token claims",
 			})
 			return
 		}
@@ -158,7 +183,7 @@ func extractToken(c *gin.Context, secureCookie bool) string {
 
 	// 2. Fallback to cookie if enabled
 	if secureCookie {
-		if token, err := c.Cookie("access_token"); err == nil {
+		if token, err := c.Cookie("access_token"); err == nil && token != "" {
 			return token
 		}
 	}
