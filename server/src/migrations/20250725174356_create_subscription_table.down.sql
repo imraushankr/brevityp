@@ -5,7 +5,4 @@
 -- Add your SQL below this line
 
 DROP TABLE IF EXISTS payments;
-
 DROP TABLE IF EXISTS subscriptions;
-
-DROP TYPE IF EXISTS subscription_plan;

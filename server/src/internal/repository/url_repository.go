@@ -23,43 +23,6 @@ func NewURLRepository(db *gorm.DB, logger logger.Logger) interfaces.URLRepositor
 	}
 }
 
-// func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
-// 	err := r.db.WithContext(ctx).Create(url).Error
-// 	if err != nil {
-// 		r.logger.Error("failed to create URL",
-// 			logger.ErrorField(err),
-// 			logger.Any("url", url))
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
-// 	// Create the URL without enforcing the User relationship if UserID is empty
-// 	if url.UserID == "" {
-// 		// Use Omit("User") to skip the user association
-// 		err := r.db.WithContext(ctx).Omit("User").Create(url).Error
-// 		if err != nil {
-// 			r.logger.Error("failed to create anonymous URL",
-// 				logger.ErrorField(err),
-// 				logger.Any("url", url))
-// 			return err
-// 		}
-// 		return nil
-// 	}
-
-// 	// For authenticated users, create with the user association
-// 	err := r.db.WithContext(ctx).Create(url).Error
-// 	if err != nil {
-// 		r.logger.Error("failed to create URL with user association",
-// 			logger.ErrorField(err),
-// 			logger.Any("url", url))
-// 		return err
-// 	}
-// 	return nil
-// }
-
-
 func (r *urlRepository) Create(ctx context.Context, url *models.URL) error {
 	// Explicitly set UserID to nil if empty
 	if url.UserID != nil && *url.UserID == "" {
@@ -102,21 +65,19 @@ func (r *urlRepository) GetByID(ctx context.Context, id string) (*models.URL, er
 	return &url, nil
 }
 
-func (r *urlRepository) GetByShortCode(ctx context.Context, code string) (*models.URL, error) {
+func (r *urlRepository) GetByShortCode(ctx context.Context, shortCode string) (*models.URL, error) {
 	var url models.URL
-	err := r.db.WithContext(ctx).
-		Where("short_code = ? AND is_active = true AND (expires_at IS NULL OR expires_at > ?)",
-			code, time.Now()).
-		First(&url).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := r.db.WithContext(ctx).
+		Where("short_code = ?", shortCode).
+		First(&url)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, models.ErrURLNotFound
 		}
-		r.logger.Error("failed to get URL by short code",
-			logger.ErrorField(err),
-			logger.String("code", code))
-		return nil, err
+		return nil, result.Error
 	}
+
 	return &url, nil
 }
 

@@ -53,12 +53,25 @@ tasks:
     cmds:
       - "{{.MIGRATE_RUN_CMD}} down -db {{.DB_FILE}}"
 
-  # Database management (Windows compatible)
+  # Database management - Windows compatible version
   db.reset:
     desc: Reset the database (drop and recreate)
     cmds:
-      - "if exist {{.DB_FILE}} del {{.DB_FILE}} || if [ -f {{.DB_FILE}} ]; then rm {{.DB_FILE}}; fi"
-      - "mkdir -p data"
+      - >
+        {{if eq OS "windows"}}
+        if exist {{.DB_FILE}} del {{.DB_FILE}}
+        {{else}}
+        rm -f {{.DB_FILE}}
+        {{end}}
+      - mkdir -p data
+      - task: migrate.up
+
+  # Alternative cross-platform version using Go
+  db.reset.go:
+    desc: Reset database using Go (cross-platform)
+    cmds:
+      - go run scripts/resetdb.go {{.DB_FILE}}
+      - mkdir -p data
       - task: migrate.up
 
   # Development setup

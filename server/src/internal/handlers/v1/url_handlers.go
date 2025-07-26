@@ -1,58 +1,3 @@
-// package v1
-
-// import (
-// 	"net/http"
-// 	"strconv"
-// 	"time"
-
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/imraushankr/bervity/server/src/internal/models"
-// 	"github.com/imraushankr/bervity/server/src/internal/pkg/interfaces"
-// 	"github.com/imraushankr/bervity/server/src/internal/pkg/logger"
-// 	"github.com/imraushankr/bervity/server/src/internal/utils"
-// )
-
-// type URLHandler struct {
-// 	urlService interfaces.URLService
-// 	log        logger.Logger
-// }
-
-// func NewURLHandler(urlService interfaces.URLService, log logger.Logger) *URLHandler {
-// 	return &URLHandler{
-// 		urlService: urlService,
-// 		log:        log,
-// 	}
-// }
-
-// func (h *URLHandler) CreateURL(c *gin.Context) {
-// 	ctx := c.Request.Context()
-// 	var req models.CreateURLRequest
-
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		h.log.Debug("invalid request body", logger.ErrorField(err))
-// 		utils.Error(c, http.StatusBadRequest, "Invalid request body", models.ErrInvalidInput)
-// 		return
-// 	}
-
-// 	userID := c.GetString("user_id")
-
-// 	resp, err := h.urlService.CreateURL(ctx, &req, userID)
-// 	if err != nil {
-// 		switch err {
-// 		case models.ErrInvalidInput, models.ErrShortCodeTaken:
-// 			utils.Error(c, http.StatusBadRequest, err.Error(), err)
-// 		case models.ErrInsufficientCredits:
-// 			utils.Error(c, http.StatusPaymentRequired, err.Error(), err)
-// 		default:
-// 			h.log.Error("failed to create URL", logger.ErrorField(err))
-// 			utils.Error(c, http.StatusInternalServerError, "Failed to create URL", err)
-// 		}
-// 		return
-// 	}
-
-// 	utils.Success(c, http.StatusCreated, "URL created successfully", resp)
-// }
-
 package v1
 
 import (
@@ -109,7 +54,6 @@ func (h *URLHandler) CreateURL(c *gin.Context) {
 
 	utils.Success(c, http.StatusCreated, "URL created successfully", resp)
 }
-
 
 func (h *URLHandler) GetURL(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -209,8 +153,8 @@ func (h *URLHandler) DeleteURL(c *gin.Context) {
 }
 
 func (h *URLHandler) Redirect(c *gin.Context) {
-	ctx := c.Request.Context()
 	shortCode := c.Param("code")
+	h.log.Info("Attempting redirect", logger.String("shortCode", shortCode))
 
 	clickData := &models.URLClick{
 		IPAddress: c.ClientIP(),
@@ -218,16 +162,23 @@ func (h *URLHandler) Redirect(c *gin.Context) {
 		UserAgent: c.Request.UserAgent(),
 	}
 
-	originalURL, err := h.urlService.RedirectURL(ctx, shortCode, clickData)
+	originalURL, err := h.urlService.RedirectURL(c.Request.Context(), shortCode, clickData)
 	if err != nil {
+		h.log.Error("Redirect failed",
+			logger.String("shortCode", shortCode),
+			logger.ErrorField(err))
+
 		if err == models.ErrURLNotFound {
-			utils.Error(c, http.StatusNotFound, err.Error(), err)
+			utils.Error(c, http.StatusNotFound, "Short URL not found", err)
 			return
 		}
-		h.log.Error("failed to redirect", logger.ErrorField(err))
 		utils.Error(c, http.StatusInternalServerError, "Failed to redirect", err)
 		return
 	}
+
+	h.log.Info("Redirect successful",
+		logger.String("shortCode", shortCode),
+		logger.String("originalURL", originalURL))
 
 	c.Redirect(http.StatusMovedPermanently, originalURL)
 }
