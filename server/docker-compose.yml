@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  brevity:
+    build:
+      context: .
+      target: prod  # Change to 'dev' for development
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - .:/app  # Only for development
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - DB_SQLITE_PATH=/app/data/brevity.db
+      - GIN_MODE=${GIN_MODE:-release}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for rate limiting (optional)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

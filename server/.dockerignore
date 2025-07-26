@@ -1,0 +1,56 @@
+# ====================== IGNORED IN DOCKER BUILDS ======================
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Local development files
+.air.toml
+.env*
+!.env.example
+
+# Build and cache directories
+bin/
+tmp/
+dist/
+*.exe
+*.out
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Log files
+*.log
+logs/*
+
+# Database files
+data/*
+
+# Uploads
+uploads/*
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test and coverage files
+coverage/
+*.test
+
+# Documentation
+docs/
+*.md
+
+# ====================== EXCEPTIONS ======================
+# Allow these specific files
+!src/migrations/
+!.env.example
+!Taskfile.yaml
